@@ -21,7 +21,7 @@ In addition to its usage with HLA nomenclatures, future versions of the PLSC cod
 
 See the following for PLSC syntax details.
 
-[PLSC 1.0 Syntax]({{ '/syntax-1.0.html/' | relative_url }})
+[PLSC 1.0 Syntax]({{ '/syntax-1.0.html' | relative_url }})
 
 
 ## About HLA
