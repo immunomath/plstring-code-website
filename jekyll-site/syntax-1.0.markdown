@@ -4,182 +4,194 @@ title: PLSC 1.0 Syntax
 permalink: /syntax-1.0.html
 ---
 
-<p style="color:darkgrey;">Draft status:  This content is under review, and may be subject to revision.</p>
+<p style="color:darkgrey;">Draft status: This content reflects the current working spec and may be revised.</p>
 
-## Version 1.0
+## 1. What is PLSC?
 
-The Phenotype List String Code (PLSC) code system defines a syntax for using the Phenotype List String (PL String) grammar in association with a gene family namespace.
+**Phenotype List String Code (PLSC)** pairs a PL-String with its **namespace**
+and **version (or date)** so that every expression is self-contained and
+traceable.
 
-## PL String Code Syntax    {#syntax}
+```
+<namespace>#<version or date>#<pl-string>
+```
 
-The PL String Code is composed of three required fields in a string separated by a "#" character.  These fields, in order, are:
+- **Namespace** — who defines the vocabulary (e.g., `hla`, `optn`, `et`, `nmdp`)
+- **Version or date** — a release tag (preferred) or ISO date (YYYY-MM-DD)
+- **PL-String** — a phenotype expression using the operators below
 
-* [Gene family namespace](#namespace)
-* [Version of the nomenclature, or the date when the PL String was created](#versionordate)
-* [PL String](#plstring)
+> Use a **release version** when available (e.g., `3.61.0`). If not, use the
+> **date** the reagent/result/interpretation was produced.
 
-    *__namespace__*`#`*__version_or_date__*`#`*__plstring__*
+---
 
-See below for [examples](#glscexamples).
+## 2. Namespaces
 
-## Gene family namespace    {#namespace}
+A namespace represents a governed, versioned code system (or a set of systems
+with one base). Examples:
 
-Each gene family namespace represents one or more code systems.  When more than one code system is used, a base system is designated which is then extended by the other code systems.
+- `hla` — **Base**: IPD-IMGT/HLA release; **Extensions**: WHO antigen names,
+  NMDP MAC codes for ambiguity, and other well-documented, versioned tables.
+- `optn` — OPTN antigen/epitope codes used in U.S. allocation workflows.
+- `et` — Eurotransplant antigen/match determinant tables.
+- `nmdp` — registry codes (including MACs), aligned to specific IMGT/HLA releases.
 
-<table style="border: 0px">
-  <tbody>
-    <tr>
-      <td style="border: 0px; vertical-align: middle;" width="36%" markdown="span">![Code Systems Comprising hla Namespace](/assets/images/hla-code-systems.png){:height="230px" width="230px"}</td>
-      <td style="border: 0px; vertical-align: middle;" markdown="span">For example, the `hla` namespace supports the IPD-IMGT/HLA allele database as the base system, as well as the National Marrow Donor Program (NMDP) multiple allele code system used to describe allele ambiguity, and the World Marrow Donor Association (WMDA) extensions (“NNNN”, “XXXX”, “UUUU” and “NEW”).</td>
-    </tr>
-  </tbody>
-</table>
+**Rules**
 
-### Supported namespaces
+- A PLSC **must** specify exactly one namespace and one version (or date).
+- **No mixing** of namespaces within a single PL-String.
+- Each implementation should publish its governance, release process, and
+  documentation for users.
 
-<table>
-  <thead>
-    <tr>
-      <th style="text-align: center">Namespace</th>
-      <th>Code System</th>
-      <th style="text-align: center">Ref</th>
-      <th>Version Notes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="text-align: center" rowspan="4" markdown="span">`hla`</td>
-      <td markdown="span">IPD-IMGT/HLA</td>
-      <td style="text-align: center" markdown="span">*a*</td>
-      <td markdown="span">tied to IPD-IMGT/HLA release version</td>
-    </tr>
-    <tr>
-      <td markdown="span">NMDP multiple allele code (MAC) designation</td>
-      <td style="text-align: center" markdown="span">*b*</td>
-      <td markdown="span">versionless, but usage may be tied to IPD-IMGT/HLA release version</td>
-    </tr>
-    <tr>
-      <td markdown="span">WMDA additional codes</td>
-      <td style="text-align: center" markdown="span">*c*</td>
-      <td markdown="span">versionless, but usage may be tied to IPD-IMGT/HLA release version</td>
-    </tr>
-    <tr>
-      <td markdown="span">XX codes</td>
-      <td style="text-align: center" markdown="span">*c*</td>
-      <td markdown="span">versionless, but usage may be tied to IPD-IMGT/HLA release version</td>
-    </tr>
-    <tr>
-      <td style="text-align: center" markdown="span">`kir`</td>
-      <td markdown="span">IPD-KIR</td>
-      <td style="text-align: center" markdown="span">*d*</td>
-      <td markdown="span">tied to IPD-KIR release version</td>
-    </tr>
-  </tbody>
-</table>
+---
 
-*a*. [https://www.ebi.ac.uk/ipd/imgt/hla]  
-*b*. [https://bioinformatics.bethematchclinical.org/hla-resources/allele-codes/allele-code-lists]  
-*c*. [https://doi.org/10.1038/sj.bmt.1705672]  
-*d*. [https://www.ebi.ac.uk/ipd/kir]
+## 3. PL-String grammar
 
-## Version or date    {#versionordate}
+PL-String encodes **phenotypes** (not genotypes). It represents the presence or
+possible presence of proteins/antigens and heterodimer pairing for class II. It
+does **not** carry chromosomal phase, zygosity, or locus order.
 
-The second field of the PL String Code contains the version of the base nomenclature of the gene family namespace.  When the version is not available, the date when the PL String was constructed is used.  This reflects the most recent version possible of the nomenclature.  This field is not optional.
+### 3.1 Delimiters and precedence
 
-### Version
+| Precedence | Delimiter | Name            | Meaning (phenotype context)                                       | Typical context                     |
+|:---------:|:---------:|-----------------|--------------------------------------------------------------------|-------------------------------------|
+| 1         | `+`       | AND             | All listed molecules/antigens are present (e.g., on a bead; in a result) | All contexts                        |
+| 2         | `~`       | Heterodimer     | Exactly two elements form one heterodimer (class II α~β)           | DQ, DP, DR (protein/antigen)        |
+| 3         | `%`       | Inclusive OR    | One **or more** of the listed items may be present                 | Antigen lists; multi-reactivity     |
+| 4         | `/`       | Exclusive OR    | **Exactly one** of the listed items is present (ambiguity)         | Protein-level ambiguity (e.g., MAC) |
 
-When available, the version of the base nomenclature release is preferred over the date. A fully qualified version should be used (e.g., `3.33.0` vs `3.33`).
+> Notes:
+> - `+` binds most tightly (1), `/` loosest (4) for unambiguous parsing.
+> - `%` (inclusive OR) is primarily for **antigen** ambiguity/association.
+> - `/` (exclusive OR) encodes **protein** ambiguity (e.g., unresolved allele).
+> - `~` is only valid for **appropriate α~β pairs** per the chosen namespace.
 
-#### Version examples:
+### 3.2 Basic rules
 
-* `3.20.0`
-* `3.25.0`
+- **No loci/phase semantics**: PL-Strings do not assert chromosomal phase,
+  cis/trans, zygosity, or locus order; `DPA1*01:04~DPB1*02:02` is equivalent to
+  `DPB1*02:02~DPA1*01:04`.
+- **Slash locus constraint**: Terms on either side of `/` must be the **same
+  locus/category** within the namespace (e.g., `HLA-A*01:01/HLA-A*01:02` is
+  valid; mixing `A` with `B` is not).
+- **Heterodimers**: `~` may only connect permitted α~β pairs as defined by the
+  namespace (e.g., `DQA1~DQB1`, `DPA1~DPB1`, `DRA~DRB3/4/5` or their antigen
+  equivalents).
+- **No mixed namespaces** inside a single PL-String.
+- **Whitespace** is not significant; implementers should normalize.
 
-### Date
+### 3.3 Examples
 
-If using the date, the format must be as described for the HL7 FHIR date type ([https://hl7.org/fhir/datatypes.html#date]). Briefly,
+**Reagent (protein ambiguity on a bead)**  
+`HLA-A*01:01/HLA-A*01:02+HLA-A*02:01`  
+> A*02:01 is present; A*01:01 or A*01:02 (but not both) is present.
 
->  *A date, or partial date (e.g. just year or year + month) as used in human communication. There is no time zone. Dates SHALL be valid dates.*  
-> *Regex: -?[0-9]{4}(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1]))?)?*
+**Result (antigen-level inclusive ambiguity)**  
+`A0101%A0102+A2402`  
+> A2402 present; A0101 and/or A0102 may be present.
 
-#### Date examples:
+**Class II heterodimers (protein level)**  
+`HLA-DQA1*05:01~HLA-DQB1*02:01%HLA-DPA1*01:03~HLA-DPB1*04:02`  
+> One or both heterodimers may be present.
 
-* `2017-10-15`
-* `2015-01`
-* `2018`
+**Constrained heterodimer variants**  
+`HLA-DPA1*01:04~HLA-DPB1*02:01%HLA-DPA1*01:04~HLA-DPB1*04:02`  
+> One or two heterodimers; DPA1*01:04 is always present.
 
-## Phenotype List String (PL String)    {#plstring}
+**Multiple loci (phenotype list)**  
+`HLA-A*01:02+HLA-A*02:01+HLA-B*07:02`  
+> A01:02, A02:01, and B07:02 present.
 
-The PL String format uses a hierarchical set of operators to describe the relationships between alleles, lists of possible alleles, phased alleles, phenotype, lists of possible phenotype, and multilocus unphased phenotype, without losing typing information or increasing typing ambiguity.
+> Implementations should reject invalid pairs like `DQA1*05:01~DPB1*04:02` based
+> on namespace pairing rules.
 
-The PL String grammar is described in  
-*Phenotype List String: a grammar for describing HLA and KIR genotyping results in a text string*
-Tissue Antigens. 2013 Aug;82(2):106-12. doi: [10.1111/tan.12150][https://doi.org/10.1111/tan.12150]
+---
 
+## 4. PLSC construction
 
-### PL String delimiters & precedence
+**Syntax**  
+```
+namespace#version_or_date#plstring
+```
 
-| Precedence | Delimiter | Description |
-| :--------: | :-------: | :---------- |
-| 1          | `^`       | Gene/Locus<br />*used in multilocus unphased phenotype* |
-| 2          | `|`       | Phenotype List<br />*to describe phenotype ambiguity where the typing system cannot distinguish chromosomal phase* |
-| 3          | `+`       | Phenotype    |
-| 4          | `~`       | Haplotype<br />*used to describe alleles that are in chromosomal phase (cis)* |
-| 5          | `/`       | Allele List<br />*to describe allele ambiguity where the typing system cannot distinguish between alleles* |
+**Version**: Prefer authoritative **release tags** (e.g., `3.61.0`).  
+**Date**: If no release applies, use ISO **YYYY-MM-DD**. The date reflects when
+the **reagent/result/interpretation** was produced—not sample collection/export.
 
-#### PL String parsing
+### 4.1 Examples
 
-![PL String Components of a Multilocus Unphased Phenotype (MUG)](/assets/images/gl-string-components.png){:style="border: 1px solid #e8e8e8"}
-*Parsing of PL String delimiters in a multilocus unphased phenotype*
+- IPD-IMGT/HLA release bound protein list:  
+  `hla#3.61.0#HLA-A*01:01/HLA-A*01:02+HLA-A*24:02`
+- Class II heterodimers with antigen mapping:  
+  `hla#2025-11-02#DQA1*05:01~DQB1*02:01%DPA1*01:03~DPB1*04:02`
+- Ambiguous MAC usage (namespace-governed):  
+  `nmdp#2025-11-02#HLA-DQB1*03:01/297+HLA-DQB1*06:02`
 
-#### PL String examples
+---
 
-* HLA-A phenotype with ambiguous allele
-   * `HLA-A*01:01:01:01/HLA-A*01:02+HLA-A*24:02:01:01`{: .language-plstring}
-* HLA-A ambiguous phenotype
-   * `HLA-A*01:02+HLA-A*03:02:01|HLA-A*01:03:01:01+HLA-A*03:04:01`{: .language-plstring}
-* HLA-DR haplotype
-   * `HLA-DRB1*03:01:02~HLA-DRB5*01:01:01`{: .language-plstring}
-* HLA multi-locus unphased phenotype
-   * `HLA-A*02:302+HLA-A*23:26/HLA-A*23:39^HLA-B*44:02:13+HLA-B*49:08`{: .language-plstring}
-* KIR ambiguous phenotype
-   * `KIR3DL2*001+KIR3DL2*007|KIR3DL2*006+KIR3DL2*010`{: .language-plstring}
+## 5. Validation checklist
 
-## PL String Code Examples    {#glscexamples}
+1. **Namespace present** and recognized.
+2. **Version or date present** and well-formed.
+3. **No mixed namespaces** within `<pl-string>`.
+4. **Operators parse** with precedence: `+` > `~` > `%` > `/`.
+5. **Slash locus constraint** holds on every `/`.
+6. **Heterodimer pairs** are permitted by the namespace.
+7. **Atoms** exist in the declared namespace release/date.
 
-#### Base nomenclature only
+---
 
-* `hla#3.25.0#HLA-A*01:01:01:01/HLA-A*01:02+HLA-A*24:02:01:01`{: .language-glsc}
-* `hla#3.29.0#HLA-DRB1*03:01:02~HLA-DRB5*01:01:01`{: .language-glsc}
-* `hla#3.33.0#HLA-A*02:69+HLA-A*23:30|HLA-A*02:302+HLA-A*23:26/HLA-A*23:39`{: .language-glsc}
-* `hla#2018-06#HLA-A*02:69+HLA-A*23:30`{: .language-glsc}
-* `kir#2.3#KIR3DL2*001+KIR3DL2*007|KIR3DL2*006+KIR3DL2*010`{: .language-glsc}
+## 6. Embedding in exchange formats
 
-#### NMDP Multiple Allele Code (MAC) Designations
+- **FHIR**: Use as a `Coding` with `system` (e.g., `http://plstring.org`),
+  `version` (namespace release or date), and `code` (the full PLSC string).
+- **HAML**: Store as the code value for reagent/result/interpretation elements.
+- **No mixing** of namespaces inside one code value; use separate codings for
+  different namespaces.
 
-* `hla#2018-03-01#HLA-DPB1*04:ANKZX+HLA-DPB1*04:FNVS`{: .language-glsc}
-
-#### MAC and WMDA extensions
-
-* `hla#3.25.0#HLA-DPB1*04:ANKZX+HLA-DPB1*04:FNVS^HLA-DRB3*XXXX`{: .language-glsc}
-
-#### as a valueCodeableConcept.coding within a HL7 FHIR Observation...
-
-~~~ xml
+**FHIR example**
+```xml
 <valueCodeableConcept>
   <coding>
     <system value="http://plstring.org"/>
     <version value="1.0"/>
-    <code value="hla#3.25.0#HLA-A*01:01:01:01/HLA-A*01:02+HLA-A*24:02:01:01"/>
+    <code value="hla#3.61.0#HLA-DQA1*05:01~HLA-DQB1*02:01+HLA-DPB1*04:01"/>
   </coding>
 </valueCodeableConcept>
-~~~
+```
 
-## References & Links    {#references}
+---
 
-TBD "PL string manuscript"
-TBD "PL string code manuscript"
+## 7. Comparison to GL-String (at a glance)
 
-[comment]: / "Please keep all reference link definitions below, at bottom of document."
-TBD "PL string manuscript"
-TBD "PL string code manuscript"
+| Concept            | GL-String (genotype)                 | PL-String (phenotype)                               |
+|-------------------|--------------------------------------|-----------------------------------------------------|
+| Focus             | Alleles/genotypes & phase            | Proteins/antigens & heterodimers                    |
+| Locus delimiter   | `^`, `|`, `?` (various)              | *Not used*                                          |
+| Exclusive OR      | `/` (allele ambiguity)               | `/` at **protein** level                            |
+| Inclusive OR      | (N/A)                                | `%` at **antigen** level                            |
+| Heterodimer       | `~` for **phase**                    | `~` for **α~β pairing** (class II)                  |
+| Composition       | `+`                                  | `+` (reagent contents; multi-reactivity)            |
+| Mix namespaces    | Allowed per implementer              | **Disallowed within a single PL-String**            |
+
+---
+
+## 8. Frequently asked
+
+**Can I encode epitopes/eplets?**  
+Not in this version. Once stable, widely adopted nomenclatures are available,
+the grammar can extend to **epitope atoms** (e.g., OPTN DPB1 unacceptable
+epitopes, eplet registries).
+
+**What about non-classical loci (E, F, G) or MICA/MICB/ABO?**  
+Permitted if your namespace publishes governed vocabularies; apply the same
+operators and rules.
+
+---
+
+<small>
+This page supersedes earlier drafts and aligns operator semantics (`+`, `~`,
+`%`, `/`), constraints (no mixed namespaces; heterodimer pairing rules), and
+PLSC binding (namespace + version/date) with the current manuscript. It replaces
+the older GL-centric placeholder text.
+</small>
