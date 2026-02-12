@@ -1,41 +1,114 @@
 ---
 layout: page
 permalink: /index.html
+title: Phenotype List String (PL-String) & PL-String Code (PLSC)
 ---
 
-<p style="color:darkgrey;">Draft status:  This content is under review, and may be subject to revision.</p>
+<p style="color:darkgrey;">Draft status: This content reflects the current working spec and may be revised.</p>
 
 ## Overview
 
-The PL String Code (PLSC) code system described here combines Phenotype List String (PL String) grammar with established HLA antigen and allotype  nomenclatures, thereby specifying a syntax for encoding of the interpretation of a patient antibody report for consideration in transpplantation
+**Phenotype List String (PL-String)** is a compact, machine-readable grammar for
+representing antigen- and protein-level information used in antibody assays and
+clinical interpretation (e.g., unacceptable/acceptable antigens). It complements
+GL-String—used for genotyping—by focusing on **phenotypes** observed or asserted
+in assays and interpretations.
 
-The established HLA nomenclature for antigens is primarily concerned antibody defined categories.  With single-allele bead assays the antigens can be reported as allotype in the format of a 2-field HLA allele.
+**PL-String Code (PLSC)** binds a PL-String to a **namespace** (e.g., IPD-IMGT/HLA,
+OPTN, Eurotransplant, NMDP) and a **version (or date)** so that each expression is
+fully traceable and interoperable across labs, registries, and allocation systems.
 
-PL String grammar[^1] is a string format for phenotyping results.
+Together, PL-String and PLSC enable:
 
-From a terminology standpoint, the result of adding a compositional grammar to an established code system such as HLA nomenclature is a new code system, because the grammar may be used to construct expressions not explicitly defined in the original system as concept codes.
+- Structured representation of **reagent composition** (e.g., SAB bead contents,
+  class II heterodimers).
+- Structured representation of **test results** (positive/negative/equivocal or
+  specificity lists).
+- Structured representation of **clinical interpretation** (e.g., antibody
+  specificities; acceptable/unacceptable antigens).
 
-In addition to its usage with HLA nomenclatures, future versions of the PLSC code system could potentially extend it for use with additional genetic nomenclature systems.
+This project defines **the grammar and its operators**; it does **not** alter or
+renormalize the vocabularies in any namespace (e.g., WHO/IMGT names, OPTN/ET
+antigen codes, NMDP MACs). Provenance and naming policies remain governed by the
+respective authorities.
 
-## Syntax
+## When to use PL-String
 
-See the following for PLSC syntax details.
+Use PL-String when you need a lossless, computable representation of:
 
 [PLSC 1.0 Syntax]({{ '/syntax-1.0.html/' | relative_url }})
+1. **Reagents**: The phenotypic composition of materials used in an assay  
+   (e.g., “proteins present on a bead” or “heterodimer pairs used in class II
+   reagents”).
+2. **Results**: The phenotypic reactivities detected in a sample with a given
+   reagent set (including ambiguity).
+3. **Interpretations**: Curated lists of antibody specificities that drive
+   downstream decisions (e.g., screening donors by unacceptable antigens).
 
+> **Scenario (end-to-end):** A patient is typed by NGS and reported as a
+> GL-String. SAB reagents are described with PL-Strings. The patient’s antibody
+> specificities (interpretation) are encoded as PL-Strings. Donor candidates
+> carrying any **unacceptable antigens** are auto-filtered in match reports.
 
-## About HLA
+## Core ideas
 
-The HLA gene family provides instructions for making a group of related proteins known as the human leukocyte antigen (HLA) complex.  The HLA complex helps the immune system distinguish the body's own proteins from proteins made by foreign invaders such as viruses and bacteria.[^2]
+- **Namespaces**: Every atom (protein/antigen/epitope) comes from one declared,
+  versioned namespace (e.g., IPD-IMGT/HLA release; OPTN/ET mapping). You **may
+  not** mix namespaces inside a single PL-String.
+- **Delimiters with precedence**: Operators encode composition, ambiguity, and
+  heterodimeric pairing (see Syntax page for full details).
+- **Phenotype-first**: PL-Strings describe **what is present/observed/claimed** at
+  the protein/antigen level; they do not assert genotype, chromosomal phase, or
+  locus order.
 
-The HLA gene system plays an important role in the human body and immune system, and it’s medical and clinical significance is extensive, with known areas of impact including transplantation, drug reactions (pharmacogenomics), and disease associations.
+## Namespaces (examples)
 
-## Extensibility
+- **IPD-IMGT/HLA** — protein-level (2-field) HLA designations and associated
+  antigens (per WHO).  
+- **OPTN** — allocation codes/mappings used in U.S. solid organ transplant.  
+- **Eurotransplant (ET)** — ET codes and match determinants.  
+- **NMDP** — registry codes, including MACs for protein ambiguity.  
 
-Topic:  Registration process and/or workflow for defining a new namespace.  
-Topic:  Mechanism for using a DNS name, e.g. xyz.org as namespace?
+A namespace must have clear governance, public documentation, versioning, and
+stable identifiers.
 
-## References
+## PL-String Code (PLSC)
 
-[^1]: *[Genotype List String: a grammar for describing HLA and KIR genotyping results in a text string](https://doi.org/10.1111/tan.12150)*, Milius, et al.
-[^2]: *[Histocompatibility complex](https://web.archive.org/web/20200809014048if_/https://ghr.nlm.nih.gov/primer/genefamily/hla)*, U.S. National Library of Medicine (archived)
+A PLSC binds a PL-String to its vocabulary context:
+
+```
+<namespace>#<version or date>#<pl-string>
+```
+
+- `<namespace>`: e.g., `hla`, `optn`, `et`, `nmdp`
+- `<version or date>`: a release like `3.61.0`, or an ISO date `2025-11-02`
+  (when a release tag is not applicable)
+- `<pl-string>`: the actual PL-String expression
+
+**Example:**  
+`hla#3.61.0#HLA-DQA1*05:01~HLA-DQB1*02:01+HLA-DPB1*04:01`
+
+See the **Syntax** page for complete operator rules, constraints, and examples.
+
+## Interoperability notes
+
+- Within a single PL-String, **do not mix** identifiers from different
+  namespaces. If multiple namespaces are needed in one report, use **separate
+  PLSCs**, each with its own namespace+version (or date).
+- If a release version is unavailable, use the **date** the reagent/result/
+  interpretation was created—**not** the collection/export date.
+- PLSC is designed to embed cleanly in exchange formats (e.g., HAML / HL7 FHIR)
+  as a code with system + version + value.
+
+## Links
+
+- **Syntax (PLSC 1.0)**: [PLSC Syntax & Operators]({{/syntax-1.0.html | relative_url }})
+- GL-String background: Milius et al., 2013; Mack et al., 2023
+- IMGT/HLA database: Barker et al., 2023
+
+---
+
+<small>
+This page updates and consolidates earlier drafts to reflect the PL-String + PLSC
+scope (reagents, results, interpretations) and namespace/version requirements, replacing prior placeholder text in earlier pages.
+</small>
